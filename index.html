@@ -130,44 +130,6 @@ td.amt{text-align:right;font-family:var(--mono);font-size:14px;white-space:nowra
 .legend{display:flex;flex-wrap:wrap;gap:4px 14px;padding:8px 16px 0;font-size:12px;color:var(--muted)}
 .legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;background:var(--k)}
 .disc{font-size:12px;color:var(--muted);padding:0 16px 16px}
-/* Choix du modèle : recherche en tapant */
-let acSel='auto',acHi=-1;
-const acIn=$('ac'),acList=$('aclist');
-function nrm(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();}
-function acMatches(q){const t=nrm(q).split(' ').filter(Boolean);return AC.map((c,i)=>i).filter(i=>{const h=nrm(AC[i].name+' '+AC[i].cl);return t.every(x=>h.includes(x));});}
-function acOpen(q){
- const items=acMatches(q||'');let h='',last=-1;
- if(!q)h+='<li role="option" class="auto" data-i="auto">Automatique<small>le moins cher qui convient</small></li>';
- items.forEach(i=>{const c=AC[i];if(c.cls!==last){h+=`<li class="gh" role="presentation">${CLS[c.cls]}</li>`;last=c.cls;}
-  h+=`<li role="option" data-i="${i}">${c.name}<small>${c.pax} pax · ${Math.round(c.range/100)*100} km</small></li>`;});
- if(!items.length)h+='<li class="none" role="presentation">Aucun modèle trouvé</li>';
- acList.innerHTML=h;acList.hidden=false;acIn.setAttribute('aria-expanded','true');acHi=-1;
-}
-function acClose(){acList.hidden=true;acIn.setAttribute('aria-expanded','false');}
-function acInfo(){const el=$('acInfo');
- if(acSel==='auto'){el.textContent="Automatique : l'appli prend le modèle le moins cher qui convient. Tape quelques lettres pour en choisir un.";}
- else{const c=AC[acSel];el.textContent=`${c.cl} · ${c.pax} sièges · portée ${Math.round(c.range/100)*100} km · ${fmt(c.rate)} / h (indicatif)`;}}
-function acChoose(v){acSel=v;acIn.value=v==='auto'?'':AC[v].name;acClose();acInfo();update();}
-function acResolve(){
- const v=acIn.value.trim();
- if(!v){acSel='auto';}
- else{const m=acMatches(v);if(m.length){const ex=m.find(i=>nrm(AC[i].name)===nrm(v));acSel=ex!==undefined?ex:m[0];}}
- acIn.value=acSel==='auto'?'':AC[acSel].name;acClose();acInfo();update();
-}
-function acMove(d){const li=[...acList.querySelectorAll('li[data-i]')];if(!li.length)return;
- acHi=(acHi+d+li.length)%li.length;li.forEach((x,k)=>x.classList.toggle('hl',k===acHi));li[acHi].scrollIntoView({block:'nearest'});}
-acIn.addEventListener('focus',()=>{if(acSel!=='auto')acIn.select();acOpen('');});
-acIn.addEventListener('input',()=>{if(!acIn.value.trim()){acSel='auto';acInfo();update();}acOpen(acIn.value);});
-acIn.addEventListener('keydown',e=>{
- if(e.key==='ArrowDown'){e.preventDefault();acMove(1);}
- else if(e.key==='ArrowUp'){e.preventDefault();acMove(-1);}
- else if(e.key==='Enter'){e.preventDefault();const hl=acList.querySelector('li.hl');if(hl){const v=hl.dataset.i;acChoose(v==='auto'?'auto':+v);}else acResolve();acIn.blur();}
- else if(e.key==='Escape'){acClose();}
-});
-acIn.addEventListener('blur',()=>{setTimeout(()=>{if(!acList.hidden)acResolve();},150);});
-acList.addEventListener('pointerdown',e=>{const li=e.target.closest('li[data-i]');if(!li)return;e.preventDefault();const v=li.dataset.i;acChoose(v==='auto'?'auto':+v);acIn.blur();});
-$('acClear').addEventListener('click',()=>acChoose('auto'));
-
 /* Défi */
 .brief{font-size:16px;line-height:1.55;border-left:4px solid var(--accent);padding:4px 0 4px 14px;margin:0 0 14px}
 .guess{display:flex;gap:8px;flex-wrap:wrap}
@@ -542,7 +504,7 @@ let round=false,deiceTouched=false;
 function today0(){const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate());}
 function init(){
  $('airports').innerHTML=AIRPORTS.map(a=>`<option value="${a.n}">`).join('');
- acInfo();
+ acShowInfo();
  const t=today0(),d=new Date(t);d.setDate(d.getDate()+14);
  els.dep.value=ymd(d);els.dep.min=ymd(t);
  const r=new Date(d);r.setDate(r.getDate()+2);els.ret.value=ymd(r);
@@ -574,6 +536,44 @@ $('o-deice').addEventListener('change',()=>{deiceTouched=true;});
 $('swap').onclick=()=>{const a=els.from.value;els.from.value=els.to.value;els.to.value=a;update();};
 function setRound(v){round=v;$('b-round').setAttribute('aria-pressed',v);$('b-oneway').setAttribute('aria-pressed',!v);update();}
 $('b-oneway').onclick=()=>setRound(false);$('b-round').onclick=()=>setRound(true);
+
+/* Choix du modèle : recherche en tapant */
+let acSel='auto',acHi=-1;
+const acIn=$('ac'),acList=$('aclist');
+function nrm(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();}
+function acMatches(q){const t=nrm(q).split(' ').filter(Boolean);return AC.map((c,i)=>i).filter(i=>{const h=nrm(AC[i].name+' '+AC[i].cl);return t.every(x=>h.includes(x));});}
+function acOpen(q){
+ const items=acMatches(q||'');let h='',last=-1;
+ if(!q)h+='<li role="option" class="auto" data-i="auto">Automatique<small>le moins cher qui convient</small></li>';
+ items.forEach(i=>{const c=AC[i];if(c.cls!==last){h+=`<li class="gh" role="presentation">${CLS[c.cls]}</li>`;last=c.cls;}
+  h+=`<li role="option" data-i="${i}">${c.name}<small>${c.pax} pax · ${Math.round(c.range/100)*100} km</small></li>`;});
+ if(!items.length)h+='<li class="none" role="presentation">Aucun modèle trouvé</li>';
+ acList.innerHTML=h;acList.hidden=false;acIn.setAttribute('aria-expanded','true');acHi=-1;
+}
+function acClose(){acList.hidden=true;acIn.setAttribute('aria-expanded','false');}
+function acShowInfo(){const el=$('acInfo');
+ if(acSel==='auto'){el.textContent="Automatique : l'appli prend le modèle le moins cher qui convient. Tape quelques lettres pour en choisir un.";}
+ else{const c=AC[acSel];el.textContent=`${c.cl} · ${c.pax} sièges · portée ${Math.round(c.range/100)*100} km · ${fmt(c.rate)} / h (indicatif)`;}}
+function acChoose(v){acSel=v;acIn.value=v==='auto'?'':AC[v].name;acClose();acShowInfo();update();}
+function acResolve(){
+ const v=acIn.value.trim();
+ if(!v){acSel='auto';}
+ else{const m=acMatches(v);if(m.length){const ex=m.find(i=>nrm(AC[i].name)===nrm(v));acSel=ex!==undefined?ex:m[0];}}
+ acIn.value=acSel==='auto'?'':AC[acSel].name;acClose();acShowInfo();update();
+}
+function acMove(d){const li=[...acList.querySelectorAll('li[data-i]')];if(!li.length)return;
+ acHi=(acHi+d+li.length)%li.length;li.forEach((x,k)=>x.classList.toggle('hl',k===acHi));li[acHi].scrollIntoView({block:'nearest'});}
+acIn.addEventListener('focus',()=>{if(acSel!=='auto')acIn.select();acOpen('');});
+acIn.addEventListener('input',()=>{if(!acIn.value.trim()){acSel='auto';acShowInfo();update();}acOpen(acIn.value);});
+acIn.addEventListener('keydown',e=>{
+ if(e.key==='ArrowDown'){e.preventDefault();acMove(1);}
+ else if(e.key==='ArrowUp'){e.preventDefault();acMove(-1);}
+ else if(e.key==='Enter'){e.preventDefault();const hl=acList.querySelector('li.hl');if(hl){const v=hl.dataset.i;acChoose(v==='auto'?'auto':+v);}else acResolve();acIn.blur();}
+ else if(e.key==='Escape'){acClose();}
+});
+acIn.addEventListener('blur',()=>{setTimeout(()=>{if(!acList.hidden)acResolve();},150);});
+acList.addEventListener('pointerdown',e=>{const li=e.target.closest('li[data-i]');if(!li)return;e.preventDefault();const v=li.dataset.i;acChoose(v==='auto'?'auto':+v);acIn.blur();});
+$('acClear').addEventListener('click',()=>acChoose('auto'));
 
 /* Défi */
 const BRIEFS=['Bonjour,','Bonsoir,','Salut,'];
