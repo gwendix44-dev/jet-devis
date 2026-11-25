@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b131c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Devis Jet">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Simulateur Devis Jet Privé</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout : en-tête + onglets ; simulateur = formulaire à gauche, devis façon document à droite */
+:root{
+  --bg:#eef2f6; --card:#ffffff; --ink:#0e1b2b; --muted:#5a6b7d; --line:#d6dee7;
+  --accent:#1d5fa8; --accent-ink:#ffffff; --brass:#9a6a14;
+  --good:#1e7a4c; --warn:#b4531a; --bad:#b3261e; --soft:#e6edf5;
+  --c1:#1d5fa8; --c2:#5b97d4; --c3:#b8862b; --c4:#7a8a9c; --c5:#2e8b6b;
+  --display:'Barlow Condensed','Arial Narrow',sans-serif;
+  --body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b131c; --card:#131e2a; --ink:#e8edf2; --muted:#93a4b6; --line:#243445;
+    --accent:#6fa8e6; --accent-ink:#0b131c; --brass:#e0b155; --soft:#1a2937;
+    --good:#4cc38a; --warn:#f0a066; --bad:#ff8a80;
+    --c1:#6fa8e6; --c2:#3b6ea5; --c3:#e0b155; --c4:#8a9bad; --c5:#4cc38a;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b131c; --card:#131e2a; --ink:#e8edf2; --muted:#93a4b6; --line:#243445;
+  --accent:#6fa8e6; --accent-ink:#0b131c; --brass:#e0b155; --soft:#1a2937;
+  --good:#4cc38a; --warn:#f0a066; --bad:#ff8a80;
+  --c1:#6fa8e6; --c2:#3b6ea5; --c3:#e0b155; --c4:#8a9bad; --c5:#4cc38a;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
+.wrap{max-width:1080px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px;padding:8px 0 14px}
+h1{font-family:var(--display);font-weight:700;font-size:34px;letter-spacing:.01em;line-height:1;margin:0;text-wrap:balance;text-transform:uppercase}
+h1 span{color:var(--accent)}
+.tag{color:var(--muted);font-size:13px;margin:4px 0 0}
+nav[role=tablist]{display:flex;gap:4px;background:var(--soft);padding:4px;border-radius:12px;width:100%}
+nav button{flex:1;border:0;background:transparent;color:var(--muted);font:600 14px var(--body);padding:10px 8px;border-radius:9px;cursor:pointer}
+nav button[aria-selected=true]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.panel{margin-top:16px}
+.panel[hidden]{display:none}
+.sim{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:900px){.sim{grid-template-columns:minmax(340px,400px) minmax(0,1fr);align-items:start}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.card h2{font-family:var(--display);text-transform:uppercase;letter-spacing:.04em;font-size:18px;margin:0 0 12px;font-weight:600;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field>label,.glabel{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+input[type=text],input[type=date],input[type=number],select{width:100%;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:500 16px var(--body)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.route-in{display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);gap:6px;align-items:end;margin-bottom:12px}
+.route-in .field{margin:0}
+.swap{min-height:44px;border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:10px;font-size:18px;cursor:pointer}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--soft);padding:4px;border-radius:10px;margin-bottom:12px}
+.seg button{border:0;background:transparent;color:var(--muted);font:600 14px var(--body);padding:10px;border-radius:7px;cursor:pointer;min-height:40px}
+.seg button[aria-pressed=true]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.gauge{margin-bottom:14px}
+.gauge .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.gauge output{font-family:var(--mono);font-size:17px;color:var(--ink)}
+.gauge .sub{font-size:12px;color:var(--muted);display:flex;justify-content:space-between}
+input[type=range]{width:100%;height:32px;accent-color:var(--accent);margin:2px 0;background:transparent}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opts label{display:flex;align-items:center;gap:8px;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:14px;cursor:pointer;min-height:44px}
+.opts input{width:18px;height:18px;accent-color:var(--accent)}
+.hint{font-size:12px;color:var(--muted);margin:4px 0 0}
+/* Devis */
+.quote{padding:0;overflow:hidden}
+.q-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:14px 16px;background:var(--soft);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.stamp{font-family:var(--display);font-weight:700;letter-spacing:.12em;color:var(--brass);border:2px solid var(--brass);padding:1px 8px;border-radius:4px;font-size:15px;display:inline-block}
+.ref{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px}
+.valid{font-size:12px;color:var(--muted);text-align:right}
+.route{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:16px 16px 4px}
+.route .code{font-family:var(--display);font-weight:700;font-size:44px;line-height:1;letter-spacing:.02em}
+.route .city{font-size:13px;color:var(--muted)}
+.route .mid{text-align:center;color:var(--muted);font-size:12px;position:relative}
+.route .mid::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1.5px dashed var(--line)}
+.route .mid span{position:relative;background:var(--card);padding:0 8px;font-family:var(--mono)}
+.route .r{text-align:right}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px 12px}
+.chip{font-size:12px;background:var(--soft);padding:4px 9px;border-radius:99px;color:var(--ink)}
+.chip b{font-weight:600}
+.warns{padding:0 16px;display:flex;flex-direction:column;gap:6px}
+.warn{font-size:13px;border-left:3px solid var(--warn);padding:6px 10px;background:var(--soft);border-radius:0 8px 8px 0}
+.warn.bad{border-color:var(--bad)}
+.warn.info{border-color:var(--accent)}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th.grp{font-family:var(--display);text-transform:uppercase;letter-spacing:.06em;font-size:14px;text-align:left;padding:14px 16px 4px;color:var(--brass);font-weight:600}
+td{padding:7px 16px;vertical-align:top;border-top:1px solid var(--line)}
+td.lbl{width:100%}
+td.lbl small{display:block;color:var(--muted);font-size:12px;line-height:1.35;margin-top:1px}
+td.lbl .q{display:block;font-family:var(--mono);font-size:12px;color:var(--muted)}
+td.amt{text-align:right;font-family:var(--mono);font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.totals{padding:12px 16px 16px;border-top:2px solid var(--ink)}
+.trow{display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:14px}
+.trow .v{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.big{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-top:8px;padding-top:10px;border-top:1px solid var(--line)}
+.big .l{font-family:var(--display);text-transform:uppercase;font-size:20px;letter-spacing:.05em;font-weight:600}
+.big .v{font-family:var(--display);font-weight:700;font-size:44px;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.per{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+.bar{display:flex;height:14px;border-radius:7px;overflow:hidden;margin:0 16px;background:var(--soft)}
+.bar i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;padding:8px 16px 0;font-size:12px;color:var(--muted)}
+.legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;background:var(--k)}
+.disc{font-size:12px;color:var(--muted);padding:0 16px 16px}
+/* Défi */
+.brief{font-size:16px;line-height:1.55;border-left:4px solid var(--accent);padding:4px 0 4px 14px;margin:0 0 14px}
+.guess{display:flex;gap:8px;flex-wrap:wrap}
+.guess .field{flex:1 1 180px;margin:0}
+.btn{min-height:46px;border:0;border-radius:10px;padding:0 18px;font:600 15px var(--body);cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+.btn.sec{background:var(--soft);color:var(--ink)}
+.btn[disabled]{opacity:.5;cursor:default}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:4px}
+.score{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0}
+.score div{background:var(--soft);border-radius:10px;padding:10px}
+.score .n{font-family:var(--display);font-weight:700;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
+.score .t{font-size:12px;color:var(--muted)}
+.verdict{font-weight:600;margin:0 0 4px}
+.stats{font-size:13px;color:var(--muted);margin-top:10px}
+.gl{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.gl div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.gl dt{font-weight:600;margin:0 0 2px}
+.gl dd{margin:0;color:var(--muted);font-size:14px}
+dl{margin:0}
+@media(max-width:440px){h1{font-size:30px}.route .code{font-size:36px}.big .v{font-size:38px}}
+@media(prefers-reduced-motion:no-preference){.bar i{transition:width .25s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Devis <span>Jet Privé</span></h1>
+    <p class="tag">Simulateur et entraînement : estime un vrai devis de vol à la demande.</p>
+  </div>
+  <nav role="tablist" aria-label="Sections">
+    <button role="tab" id="t-simulateur" aria-selected="true" data-tab="simulateur">Simulateur</button>
+    <button role="tab" id="t-defi" aria-selected="false" data-tab="defi">Défi devis</button>
+    <button role="tab" id="t-glossaire" aria-selected="false" data-tab="glossaire">Glossaire</button>
+  </nav>
+</header>
+
+<section class="panel" id="p-simulateur" role="tabpanel" aria-labelledby="t-simulateur">
+  <div class="sim">
+    <div class="card" id="form">
+      <h2>Le vol</h2>
+      <div class="route-in">
+        <div class="field"><label for="from">Départ</label><input type="text" id="from" list="airports" value="Nantes (NTE)" autocomplete="off" autocapitalize="off"></div>
+        <button class="swap" id="swap" type="button" aria-label="Inverser départ et arrivée">⇄</button>
+        <div class="field"><label for="to">Arrivée</label><input type="text" id="to" list="airports" value="Nice (NCE)" autocomplete="off" autocapitalize="off"></div>
+      </div>
+      <datalist id="airports"></datalist>
+
+      <div class="seg" role="group" aria-label="Type de trajet">
+        <button type="button" id="b-oneway" aria-pressed="true">Aller simple</button>
+        <button type="button" id="b-round" aria-pressed="false">Aller-retour</button>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="dep">Date aller</label><input type="date" id="dep"></div>
+        <div class="field" id="retWrap"><label for="ret">Date retour</label><input type="date" id="ret" disabled></div>
+      </div>
+
+      <div class="gauge">
+        <div class="top"><label class="glabel" for="pax">Passagers</label><output id="paxO">4</output></div>
+        <input type="range" id="pax" min="1" max="16" step="1" value="4">
+        <div class="sub"><span>1</span><span>16</span></div>
+      </div>
+      <div class="gauge">
+        <div class="top"><label class="glabel" for="bag">Bagages par personne</label><output id="bagO">20 kg</output></div>
+        <input type="range" id="bag" min="0" max="60" step="5" value="20">
+        <div class="sub"><span>cabine seule</span><span>60 kg</span></div>
+      </div>
+      <div class="gauge">
+        <div class="top"><label class="glabel" for="cater">Catering</label><output id="caterO">Aucun</output></div>
+        <input type="range" id="cater" min="0" max="4" step="1" value="0">
+        <div class="sub"><span>aucun</span><span>gastronomique</span></div>
+      </div>
+      <div class="gauge">
+        <div class="top"><label class="glabel" for="comm">Commission du courtier</label><output id="commO">8 %</output></div>
+        <input type="range" id="comm" min="0" max="15" step="1" value="8">
+        <div class="sub"><span>0 %</span><span>15 %</span></div>
+      </div>
+
+      <div class="field"><label for="cat">Appareil</label><select id="cat"></select></div>
+
+      <div class="glabel" style="margin-bottom:6px">Options</div>
+      <div class="opts">
+        <label><input type="checkbox" id="o-crew">Hôtesse / steward</label>
+        <label><input type="checkbox" id="o-wifi">Wi-Fi à bord</label>
+        <label><input type="checkbox" id="o-pet">Animal de compagnie</label>
+        <label><input type="checkbox" id="o-limo">Chauffeur aux 2 bouts</label>
+        <label><input type="checkbox" id="o-deice">Dégivrage prévu</label>
+      </div>
+      <p class="hint" id="deiceHint"></p>
+    </div>
+    <div class="card quote" id="quote" aria-live="polite"></div>
+  </div>
+</section>
+
+<section class="panel" id="p-defi" role="tabpanel" aria-labelledby="t-defi" hidden>
+  <div class="card">
+    <h2>Un client t'écrit</h2>
+    <p class="brief" id="brief"></p>
+    <div id="hintBox" class="hint" style="margin:0 0 10px"></div>
+    <div class="actions">
+      <div class="field" style="margin:0;flex:1 1 180px"><label for="guess">Ton prix TTC (€)</label><input type="number" id="guess" inputmode="numeric" min="0" step="100" placeholder="ex. 9500"></div>
+      <button class="btn" id="validate" type="button">Valider</button>
+      <button class="btn sec" id="hintBtn" type="button">Indice (−15 pts)</button>
+    </div>
+    <div id="result" hidden>
+      <div class="score" id="scoreRow"></div>
+      <p class="verdict" id="verdict"></p>
+      <button class="btn" id="next" type="button">Client suivant</button>
+    </div>
+    <p class="stats" id="stats"></p>
+  </div>
+  <div class="card quote" id="chQuote" style="margin-top:16px" hidden></div>
+</section>
+
+<section class="panel" id="p-glossaire" role="tabpanel" aria-labelledby="t-glossaire" hidden>
+  <dl class="gl" id="gl"></dl>
+</section>
+</div>
+
+<script>
+//CORE-START
+const AIRPORTS=[
+ {c:'Paris',n:'Paris (LBG)',code:'LBG',lat:48.969,lon:2.441,fee:1800,eu:1},
+ {c:'Nantes',n:'Nantes (NTE)',code:'NTE',lat:47.153,lon:-1.611,fee:900,eu:1},
+ {c:'Nice',n:'Nice (NCE)',code:'NCE',lat:43.665,lon:7.215,fee:1900,eu:1},
+ {c:'Cannes',n:'Cannes-Mandelieu (CEQ)',code:'CEQ',lat:43.542,lon:6.953,fee:1100,eu:1,maxCat:2},
+ {c:'Lyon',n:'Lyon-Bron (LYN)',code:'LYN',lat:45.727,lon:4.944,fee:1100,eu:1},
+ {c:'Marseille',n:'Marseille (MRS)',code:'MRS',lat:43.436,lon:5.215,fee:1300,eu:1},
+ {c:'Bordeaux',n:'Bordeaux (BOD)',code:'BOD',lat:44.828,lon:-0.716,fee:1000,eu:1},
+ {c:'Toulouse',n:'Toulouse (TLS)',code:'TLS',lat:43.629,lon:1.364,fee:1000,eu:1},
+ {c:'Genève',n:'Genève (GVA)',code:'GVA',lat:46.238,lon:6.109,fee:2200,eu:0},
+ {c:'Zürich',n:'Zürich (ZRH)',code:'ZRH',lat:47.458,lon:8.548,fee:2300,eu:0},
+ {c:'Londres Farnborough',n:'Londres Farnborough (FAB)',code:'FAB',lat:51.275,lon:-0.776,fee:2200,eu:0},
+ {c:'Londres Luton',n:'Londres Luton (LTN)',code:'LTN',lat:51.875,lon:-0.368,fee:1800,eu:0},
+ {c:'Milan',n:'Milan Linate (LIN)',code:'LIN',lat:45.445,lon:9.277,fee:1900,eu:1},
+ {c:'Rome',n:'Rome Ciampino (CIA)',code:'CIA',lat:41.799,lon:12.594,fee:1700,eu:1},
+ {c:'Madrid',n:'Madrid (MAD)',code:'MAD',lat:40.472,lon:-3.561,fee:1700,eu:1},
+ {c:'Barcelone',n:'Barcelone (BCN)',code:'BCN',lat:41.297,lon:2.078,fee:1700,eu:1},
+ {c:'Ibiza',n:'Ibiza (IBZ)',code:'IBZ',lat:38.873,lon:1.373,fee:2300,eu:1},
+ {c:'Palma',n:'Palma de Majorque (PMI)',code:'PMI',lat:39.552,lon:2.739,fee:1800,eu:1},
+ {c:'Lisbonne',n:'Lisbonne (LIS)',code:'LIS',lat:38.774,lon:-9.134,fee:1600,eu:1},
+ {c:'Munich',n:'Munich (MUC)',code:'MUC',lat:48.354,lon:11.786,fee:1900,eu:1},
+ {c:'Berlin',n:'Berlin (BER)',code:'BER',lat:52.362,lon:13.501,fee:1700,eu:1},
+ {c:'Amsterdam',n:'Amsterdam (AMS)',code:'AMS',lat:52.309,lon:4.764,fee:1800,eu:1},
+ {c:'Bruxelles',n:'Bruxelles (BRU)',code:'BRU',lat:50.901,lon:4.484,fee:1600,eu:1},
+ {c:'Mykonos',n:'Mykonos (JMK)',code:'JMK',lat:37.435,lon:25.348,fee:2200,eu:1},
+ {c:'Athènes',n:'Athènes (ATH)',code:'ATH',lat:37.936,lon:23.945,fee:1700,eu:1},
+ {c:'Istanbul',n:'Istanbul (IST)',code:'IST',lat:41.262,lon:28.742,fee:2000,eu:0},
+ {c:'Marrakech',n:'Marrakech (RAK)',code:'RAK',lat:31.607,lon:-8.036,fee:1700,eu:0},
+ {c:'Dubaï',n:'Dubaï Al Maktoum (DWC)',code:'DWC',lat:24.896,lon:55.161,fee:2800,eu:0},
+ {c:'Doha',n:'Doha (DOH)',code:'DOH',lat:25.273,lon:51.608,fee:2800,eu:0},
+ {c:'New York',n:'New York Teterboro (TEB)',code:'TEB',lat:40.850,lon:-74.061,fee:3200,eu:0},
+ {c:'Miami',n:'Miami Opa-locka (OPF)',code:'OPF',lat:25.907,lon:-80.278,fee:2600,eu:0},
+ {c:'Los Angeles',n:'Los Angeles Van Nuys (VNY)',code:'VNY',lat:34.210,lon:-118.490,fee:2800,eu:0},
+ {c:'Montréal',n:'Montréal (YUL)',code:'YUL',lat:45.470,lon:-73.741,fee:2200,eu:0},
+ {c:'Tokyo',n:'Tokyo Haneda (HND)',code:'HND',lat:35.549,lon:139.780,fee:3200,eu:0},
+ {c:'Singapour',n:'Singapour Seletar (XSP)',code:'XSP',lat:1.417,lon:103.868,fee:2500,eu:0}
+];
+const CATS=[
+ {name:'Turbopropulseur',ex:'Pilatus PC-12',pax:6,speed:520,rate:2200,range:3200,bag:250,ff:0.6},
+ {name:'Jet très léger',ex:'Phenom 100 / Citation M2',pax:4,speed:720,rate:2700,range:2000,bag:120,ff:0.7},
+ {name:'Jet léger',ex:'Phenom 300 / Citation CJ3',pax:7,speed:800,rate:3500,range:3600,bag:250,ff:0.85},
+ {name:'Jet moyen',ex:'Citation XLS / Learjet 60',pax:8,speed:790,rate:4400,range:3900,bag:350,ff:1},
+ {name:'Jet super moyen',ex:'Challenger 350 / Praetor 600',pax:9,speed:830,rate:5700,range:6000,bag:500,ff:1.2},
+ {name:'Gros porteur',ex:'Falcon 7X / Gulfstream G450',pax:14,speed:880,rate:8200,range:9000,bag:800,ff:1.7},
+ {name:'Ultra longue distance',ex:'Global 6000 / Gulfstream G650',pax:16,speed:900,rate:11000,range:12500,bag:1100,ff:2.3}
+];
+const CATERING=[
+ {n:'Aucun',p:0},{n:'Boissons et snacks',p:35},{n:'Plateaux repas',p:90},{n:'Premium',p:180},{n:'Gastronomique + champagne',p:350}
+];
+const MED=['NCE','CEQ','IBZ','PMI','JMK','ATH','BCN','MRS'];
+const fmt=n=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(Math.round(n));
+const rad=x=>x*Math.PI/180;
+function hav(a,b){const R=6371,dl=rad(b.lat-a.lat),dn=rad(b.lon-a.lon);
+ const h=Math.sin(dl/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+function pd(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function demand(dep,today,A,B){
+ const reasons=[];let pct=0;
+ const ahead=Math.round((dep-today)/864e5);
+ if(ahead<1){pct+=.25;reasons.push('départ à moins de 24 h : +25 %');}
+ else if(ahead<3){pct+=.15;reasons.push('départ à moins de 3 jours : +15 %');}
+ else if(ahead<7){pct+=.05;reasons.push('départ à moins d\'une semaine : +5 %');}
+ const m=dep.getMonth()+1,d=dep.getDate();
+ if((m===12&&d>=18)||(m===1&&d<=4)){pct+=.20;reasons.push('vacances de fin d\'année : +20 %');}
+ if((m===7&&d>=10)||(m===8&&d<=25)){pct+=.10;reasons.push('haute saison d\'été : +10 %');}
+ if(m===5&&(A.code==='NCE'||A.code==='CEQ'||B.code==='NCE'||B.code==='CEQ')){pct+=.20;reasons.push('mai sur la Côte d\'Azur (Cannes, Grand Prix) : +20 %');}
+ const wd=dep.getDay();
+ if(wd===5||wd===0){pct+=.05;reasons.push('vendredi ou dimanche : +5 %');}
+ return {pct:Math.min(pct,.45),reasons};
+}
+function pickCat(pax,bagTotal,route,maxCat){
+ for(let i=0;i<=maxCat;i++){const c=CATS[i];if(pax<=c.pax&&bagTotal<=c.bag&&route<=c.range*.9)return {i,stop:false};}
+ for(let i=0;i<=maxCat;i++){const c=CATS[i];if(pax<=c.pax&&bagTotal<=c.bag&&route<=c.range*1.8)return {i,stop:true};}
+ return {i:Math.min(6,maxCat),stop:true,fail:true};
+}
+function computeQuote(p){
+ const A=p.from,B=p.to,legs=p.round?2:1;
+ const dist=hav(A,B),route=dist*1.05,bagTotal=p.pax*p.bagKg;
+ const maxCat=Math.min(A.maxCat??6,B.maxCat??6);
+ const warns=[];let ci,stop;
+ if(p.cat==='auto'){const r=pickCat(p.pax,bagTotal,route,maxCat);ci=r.i;stop=r.stop;
+  if(r.fail)warns.push({t:'bad',m:'Aucun appareil ne réalise ce vol dans ces conditions. Réduis les passagers, les bagages ou la distance.'});}
+ else{ci=+p.cat;stop=route>CATS[ci].range*.9;}
+ const c=CATS[ci];
+ if(p.pax>c.pax)warns.push({t:'bad',m:`Cet appareil n'a que ${c.pax} sièges pour ${p.pax} passagers.`});
+ if(bagTotal>c.bag)warns.push({t:'bad',m:`${bagTotal} kg de bagages pour ${c.bag} kg de soute : trop lourd pour cet appareil.`});
+ if(route>c.range*1.8)warns.push({t:'bad',m:'Distance trop longue pour cet appareil, même avec une escale.'});
+ if(ci>maxCat)warns.push({t:'bad',m:'Cannes-Mandelieu n\'accepte que les jets légers ou plus petits.'});
+ if(stop&&route<=c.range*1.8)warns.push({t:'info',m:'Escale technique de ravitaillement nécessaire : +0,6 h par vol et frais d\'atterrissage supplémentaires.'});
+ const block=route/c.speed+.3;
+ const hrs=Math.max(1,block)+(stop?.6:0);
+ const lines=[];
+ const add=(g,label,qty,amt,note)=>{if(amt>0.5||amt<-0.5)lines.push({g,label,qty,amt,note});};
+ const flight=c.rate*hrs*legs;
+ add('Vol',`Heures de vol : ${c.name}`,`${(hrs*legs).toFixed(1)} h × ${fmt(c.rate)} (${c.ex})`,flight,'Tarif horaire de l\'appareil : équipage, assurance, entretien. Minimum facturé 1 h par vol.');
+ const posit=p.round?0:.4*c.rate*hrs;
+ add('Vol','Repositionnement de l\'avion',`40 % d'un vol à vide`,posit,'En aller simple, l\'avion rentre à vide vers sa base. L\'opérateur en facture une part.');
+ const base=flight+posit;
+ const dem=demand(p.dep,p.today,A,B);
+ add('Vol',`Majoration période et délai (+${Math.round(dem.pct*100)} %)`,'',base*dem.pct,dem.reasons.join(' ; '));
+ add('Vol','Surcharge carburant','8 % des heures de vol',base*.08,'Le kérosène varie vite : l\'opérateur indexe une surcharge.');
+ const nights=p.round?Math.max(0,Math.round((p.ret-p.dep)/864e5)):0;
+ add('Vol','Attente de l\'équipage',`${nights} nuit${nights>1?'s':''} × ${fmt(650+250*c.ff)}`,nights*(650+250*c.ff),'Hôtel et per diem de l\'équipage, parking ou hangar de l\'avion.');
+ let fees=c.ff*(.5*A.fee+B.fee);if(p.round)fees+=c.ff*(.5*B.fee+A.fee);
+ add('Aéroports et route',`Atterrissage et assistance au sol (${A.code}, ${B.code})`,`${legs*2} mouvements`,fees,'Redevance d\'atterrissage, handling au FBO, taxe passagers. Dépend de l\'aéroport et du poids de l\'avion.');
+ add('Aéroports et route','Redevances de navigation',`${Math.round(route*legs)} km`,route*.5*c.ff*legs,'Survol des pays traversés (Eurocontrol, océanique).');
+ if(!(A.eu&&B.eu))add('Aéroports et route','Formalités et permis',`${legs} vol${legs>1?'s':''}`,450*legs,'Autorisations de survol et d\'atterrissage, douane, immigration (hors UE).');
+ if(stop)add('Aéroports et route','Escale technique',`${legs} escale${legs>1?'s':''}`,1200*c.ff*legs,'Atterrissage et ravitaillement.');
+ const lvl=CATERING[p.catering];
+ const catQ=p.pax*legs*lvl.p*(hrs>4?1.5:1);
+ add('Services',`Catering : ${lvl.n}`,`${p.pax} pax × ${legs} vol${legs>1?'s':''}`,catQ,hrs>4?'Vol long : portions supplémentaires (×1,5).':'Prix par passager et par vol.');
+ if(p.o.crew)add('Services','Hôtesse / steward',`${legs} vol${legs>1?'s':''} × ${fmt(700)}`,700*legs,'Personnel de cabine supplémentaire.');
+ if(p.o.wifi)add('Services','Wi-Fi à bord',`${legs} vol${legs>1?'s':''} × ${fmt(300)}`,300*legs,'Connexion satellite ou 4G selon la zone.');
+ if(p.o.pet)add('Services','Animal de compagnie','forfait',200,'Nettoyage et formalités.');
+ if(p.o.limo)add('Services','Chauffeur aux deux extrémités',`${legs*2} transferts × ${fmt(250)}`,250*legs*2,'Voiture avec chauffeur jusqu\'à la passerelle.');
+ if(p.o.deice)add('Services','Dégivrage',`${legs} vol${legs>1?'s':''} × ${fmt(1100)}`,1100*legs,'Traitement antigivre avant le départ (hiver).');
+ const sub=lines.reduce((s,l)=>s+l.amt,0);
+ const comm=sub*p.commission/100;
+ add('Courtage',`Commission du courtier (${p.commission} %)`,'',comm,'Marge du courtier sur le prix opérateur.');
+ const ht=sub+comm;
+ const vr=(A.eu&&B.eu)?.10:0;
+ const vat=ht*vr;
+ const groups={};lines.forEach(l=>groups[l.g]=(groups[l.g]||0)+l.amt);
+ if(vat>0)groups['Taxes']=vat;
+ return {A,B,dist,route,c,ci,stop,block,hrs,legs,nights,lines,warns,sub,comm,ht,vr,vat,ttc:ht+vat,perPax:(ht+vat)/p.pax,groups,dem,bagTotal,p};
+}
+//CORE-END
+
+/* ---------- Interface ---------- */
+const $=id=>document.getElementById(id);
+const GCOL={'Vol':'--c1','Aéroports et route':'--c2','Services':'--c3','Courtage':'--c4','Taxes':'--c5'};
+function findAirport(s){
+ s=(s||'').trim().toLowerCase();if(!s)return null;
+ let a=AIRPORTS.find(x=>x.n.toLowerCase()===s);if(a)return a;
+ const m=s.match(/\(([a-z]{3})\)/);if(m){a=AIRPORTS.find(x=>x.code.toLowerCase()===m[1]);if(a)return a;}
+ a=AIRPORTS.find(x=>x.code.toLowerCase()===s);if(a)return a;
+ return AIRPORTS.find(x=>x.n.toLowerCase().startsWith(s)||x.c.toLowerCase().startsWith(s))||null;
+}
+function hashRef(q){let h=0;const s=q.A.code+q.B.code+q.p.pax+q.p.bagKg+q.p.catering+q.ttc.toFixed(0);for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return 'JET-'+q.p.dep.getFullYear()+'-'+String(1000+h%9000);}
+function dfr(d){return d.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
+function hh(h){const m=Math.round(h*60);return Math.floor(m/60)+' h '+String(m%60).padStart(2,'0');}
+function renderQuote(q,el){
+ let rows='',last='';
+ q.lines.forEach(l=>{
+  if(l.g!==last){rows+=`<tr><th class="grp" colspan="2">${l.g}</th></tr>`;last=l.g;}
+  rows+=`<tr><td class="lbl">${l.label}${l.qty?`<span class="q">${l.qty}</span>`:''}<small>${l.note||''}</small></td><td class="amt">${fmt(l.amt)}</td></tr>`;
+ });
+ const tot=q.ht||1;
+ const seg=Object.keys(q.groups).map(g=>`<i style="width:${(q.groups[g]/(q.ttc||1)*100).toFixed(2)}%;background:var(${GCOL[g]})"></i>`).join('');
+ const leg=Object.keys(q.groups).map(g=>`<span style="--k:var(${GCOL[g]})">${g} ${Math.round(q.groups[g]/(q.ttc||1)*100)} %</span>`).join('');
+ const w=q.warns.map(x=>`<div class="warn ${x.t}">${x.m}</div>`).join('');
+ const p=q.p;
+ el.innerHTML=`
+ <div class="q-head"><div><span class="stamp">DEVIS INDICATIF</span><div class="ref">${hashRef(q)}</div></div><div class="valid">Valable 48 h<br>Prix en euros</div></div>
+ <div class="route"><div><div class="code">${q.A.code}</div><div class="city">${q.A.c}</div></div><div class="mid"><span>${Math.round(q.dist)} km</span></div><div class="r"><div class="code">${q.B.code}</div><div class="city">${q.B.c}</div></div></div>
+ <div class="chips">
+  <span class="chip"><b>${p.round?'Aller-retour':'Aller simple'}</b></span>
+  <span class="chip">${dfr(p.dep)}${p.round?' → '+dfr(p.ret):''}</span>
+  <span class="chip"><b>${q.c.name}</b> · ${q.c.ex}</span>
+  <span class="chip">Vol ≈ ${hh(q.block+(q.stop?.6:0))}${q.stop?' avec escale':''}</span>
+  <span class="chip">${p.pax} pax · ${q.bagTotal} kg de bagages</span>
+ </div>
+ ${w?`<div class="warns">${w}</div>`:''}
+ <table><tbody>${rows}</tbody></table>
+ <div class="totals">
+  <div class="trow"><span>Sous-total opérateur</span><span class="v">${fmt(q.sub)}</span></div>
+  <div class="trow"><span>Total HT</span><span class="v">${fmt(q.ht)}</span></div>
+  <div class="trow"><span>TVA ${q.vr?'10 % (vol intra-UE)':'(hors UE : 0 %)'}</span><span class="v">${fmt(q.vat)}</span></div>
+  <div class="big"><span class="l">Total TTC</span><span class="v">${fmt(q.ttc)}</span></div>
+  <div class="per"><span>Soit par passager</span><span>${fmt(q.perPax)}</span></div>
+ </div>
+ <div class="bar" aria-hidden="true">${seg}</div>
+ <div class="legend">${leg}</div>
+ <p class="disc" style="margin-top:12px">Estimation pédagogique à ±20 %. Les vrais devis dépendent de la disponibilité de l'avion, de son emplacement, des créneaux et de la météo.</p>`;
+}
+
+/* Simulateur */
+const els={};['from','to','dep','ret','pax','bag','cater','comm','cat'].forEach(i=>els[i]=$(i));
+let round=false,deiceTouched=false;
+function today0(){const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate());}
+function init(){
+ $('airports').innerHTML=AIRPORTS.map(a=>`<option value="${a.n}">`).join('');
+ els.cat.innerHTML='<option value="auto">Automatique (le plus économique)</option>'+CATS.map((c,i)=>`<option value="${i}">${c.name} · ${c.pax} pax max</option>`).join('');
+ const t=today0(),d=new Date(t);d.setDate(d.getDate()+14);
+ els.dep.value=ymd(d);els.dep.min=ymd(t);
+ const r=new Date(d);r.setDate(r.getDate()+2);els.ret.value=ymd(r);
+ $('gl').innerHTML=GLOSS.map(g=>`<div><dt>${g[0]}</dt><dd>${g[1]}</dd></div>`).join('');
+}
+function params(){
+ const A=findAirport(els.from.value),B=findAirport(els.to.value);
+ if(!A||!B||A===B||!els.dep.value)return null;
+ const dep=pd(els.dep.value);let ret=els.ret.value?pd(els.ret.value):dep;if(ret<dep)ret=dep;
+ return {from:A,to:B,round,dep,ret,today:today0(),pax:+els.pax.value,bagKg:+els.bag.value,catering:+els.cater.value,commission:+els.comm.value,cat:els.cat.value,
+  o:{crew:$('o-crew').checked,wifi:$('o-wifi').checked,pet:$('o-pet').checked,limo:$('o-limo').checked,deice:$('o-deice').checked}};
+}
+function update(){
+ $('paxO').textContent=els.pax.value;
+ $('bagO').textContent=els.bag.value==='0'?'cabine seule':els.bag.value+' kg';
+ $('caterO').textContent=CATERING[+els.cater.value].n;
+ $('commO').textContent=els.comm.value+' %';
+ els.ret.disabled=!round;$('retWrap').style.opacity=round?1:.5;
+ if(els.dep.value){els.ret.min=els.dep.value;
+  const m=pd(els.dep.value).getMonth()+1,winter=m>=11||m<=3;
+  if(!deiceTouched)$('o-deice').checked=winter;
+  $('deiceHint').textContent=winter?'Période hivernale : le dégivrage est souvent nécessaire.':'';}
+ const p=params(),box=$('quote');
+ if(!p){box.innerHTML='<div class="disc" style="padding:24px 16px">Choisis deux aéroports différents dans la liste et une date pour obtenir le devis.</div>';return;}
+ renderQuote(computeQuote(p),box);
+}
+document.querySelectorAll('#form input,#form select').forEach(e=>e.addEventListener('input',update));
+$('o-deice').addEventListener('change',()=>{deiceTouched=true;});
+$('swap').onclick=()=>{const a=els.from.value;els.from.value=els.to.value;els.to.value=a;update();};
+function setRound(v){round=v;$('b-round').setAttribute('aria-pressed',v);$('b-oneway').setAttribute('aria-pressed',!v);update();}
+$('b-oneway').onclick=()=>setRound(false);$('b-round').onclick=()=>setRound(true);
+
+/* Défi */
+const BRIEFS=['Bonjour,','Bonsoir,','Salut,'];
+let ch=null,hinted=false,done=false;
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+function newScenario(){
+ let A,B,d;do{A=rnd(AIRPORTS);B=rnd(AIRPORTS);d=A===B?0:hav(A,B);}while(!d||d<150||d>9500);
+ const t=today0(),dep=new Date(t);dep.setDate(dep.getDate()+1+Math.floor(Math.random()*60));
+ const isRound=Math.random()<.4&&d<5500,ret=new Date(dep);if(isRound)ret.setDate(ret.getDate()+Math.floor(Math.random()*5));
+ const o={crew:Math.random()<.15,wifi:Math.random()<.2,pet:Math.random()<.08,limo:Math.random()<.25,deice:false};
+ const m=dep.getMonth()+1;o.deice=(m>=11||m<=3)&&Math.random()<.7;
+ ch={from:A,to:B,round:isRound,dep,ret,today:t,pax:rnd([1,2,2,3,4,4,5,6,6,8,10,12]),bagKg:rnd([10,15,20,25,30,40]),catering:rnd([0,0,1,2,2,3,4]),commission:8,cat:'auto',o};
+ hinted=false;done=false;
+ const x=ch,ex=[];if(x.o.limo)ex.push('un chauffeur de chaque côté');if(x.o.wifi)ex.push('le Wi-Fi');if(x.o.pet)ex.push('un chien');if(x.o.crew)ex.push('une hôtesse');
+ $('brief').innerHTML=`${rnd(BRIEFS)} je cherche un vol <b>${x.round?'aller-retour':'aller simple'}</b> de <b>${x.from.c}</b> à <b>${x.to.c}</b> le <b>${dfr(x.dep)}</b>${x.round?`, retour le <b>${dfr(x.ret)}</b>`:''}. Nous serons <b>${x.pax}</b> avec environ <b>${x.bagKg} kg</b> de bagages chacun. Catering : <b>${CATERING[x.catering].n.toLowerCase()}</b>.${ex.length?' Nous voulons aussi '+ex.join(', ')+'.':''} Quel est votre meilleur prix ?`;
+ $('guess').value='';$('guess').disabled=false;$('validate').disabled=false;$('hintBtn').disabled=false;
+ $('hintBox').textContent='';$('result').hidden=true;$('chQuote').hidden=true;
+}
+function stats(){let s={n:0,sum:0};try{s=JSON.parse(localStorage.getItem('jet-defi')||'{"n":0,"sum":0}');}catch(e){}return s;}
+function showStats(){const s=stats();$('stats').textContent=s.n?`Ta moyenne : ${Math.round(s.sum/s.n)} / 100 sur ${s.n} devis.`:'Estime le prix avant de valider : le score mesure ton écart au vrai devis.';}
+$('hintBtn').onclick=()=>{if(done)return;const q=computeQuote(ch);hinted=true;$('hintBtn').disabled=true;
+ $('hintBox').innerHTML=`Indice : distance ${Math.round(q.dist)} km, <b>${q.c.name}</b>, vol d'environ ${hh(q.block)}${q.stop?' avec escale':''}.`;};
+$('validate').onclick=()=>{
+ const g=parseFloat($('guess').value);if(!(g>0)){$('guess').focus();return;}
+ const q=computeQuote(ch),err=Math.abs(g-q.ttc)/q.ttc;
+ let sc=Math.round(Math.max(0,100*(1-err/.4)));if(hinted)sc=Math.max(0,sc-15);
+ done=true;$('guess').disabled=true;$('validate').disabled=true;$('hintBtn').disabled=true;
+ const verdict=err<=.05?'Niveau courtier senior.':err<=.15?'Très bien, tu es dans la fourchette réaliste.':err<=.3?'Correct, mais un poste t\'a échappé.':'Trop loin : regarde les lignes qui pèsent le plus ci-dessous.';
+ $('scoreRow').innerHTML=`<div><div class="n">${fmt(q.ttc)}</div><div class="t">Vrai devis TTC</div></div><div><div class="n">${(g>=q.ttc?'+':'−')+Math.round(err*100)} %</div><div class="t">Ton écart</div></div><div><div class="n">${sc}</div><div class="t">Score sur 100</div></div>`;
+ $('verdict').textContent=verdict;$('result').hidden=false;
+ renderQuote(q,$('chQuote'));$('chQuote').hidden=false;
+ try{const s=stats();s.n++;s.sum+=sc;localStorage.setItem('jet-defi',JSON.stringify(s));}catch(e){}
+ showStats();
+};
+$('guess').addEventListener('keydown',e=>{if(e.key==='Enter')$('validate').click();});
+$('next').onclick=()=>{newScenario();showStats();$('guess').focus();};
+
+/* Glossaire */
+const GLOSS=[
+ ['Heure de vol (block time)','Durée facturée, de la fermeture des portes à leur ouverture. Elle comprend le roulage, la montée et l\'approche.'],
+ ['Repositionnement (empty leg)','Vol à vide pour amener l\'avion chez le client ou le ramener à sa base. Il se facture en aller simple.'],
+ ['Retour à vide (deadhead)','Même chose vue de l\'opérateur : l\'avion vole sans passager. Les offres de dernière minute sur ces vols sont moins chères.'],
+ ['FBO / handling','Terminal privé de l\'aéroport. Il assure l\'accueil, le salon, le bagage et l\'avitaillement.'],
+ ['Redevance d\'atterrissage','Taxe payée à l\'aéroport selon le poids maximal de l\'avion (MTOW).'],
+ ['Redevance de route','Frais de survol facturés par pays traversé. Ils pèsent beaucoup sur l\'Atlantique.'],
+ ['Escale technique','Arrêt pour ravitailler quand la distance dépasse l\'autonomie de l\'appareil.'],
+ ['Surcharge carburant','Supplément indexé sur le prix du kérosène. Il varie d\'un mois à l\'autre.'],
+ ['Slot','Créneau de décollage ou d\'atterrissage. Il est obligatoire sur les aéroports saturés comme Nice ou Londres.'],
+ ['Commission du courtier','Marge ajoutée au prix de l\'opérateur, souvent entre 5 et 15 %. Le courtier compare et négocie pour son client.'],
+ ['Opérateur (Part 135 / AOC)','Compagnie titulaire du certificat qui exploite l\'avion. Le courtier n\'est pas l\'opérateur.'],
+ ['MTOW','Masse maximale au décollage. Elle fixe les redevances et limite le chargement.'],
+ ['Fourchette de fiabilité','Un devis réel varie de ±20 % selon l\'avion libre le plus proche. Demande toujours 2 ou 3 opérateurs.']
+];
+
+/* Onglets */
+const TABS=['simulateur','defi','glossaire'];
+function showTab(n){if(!TABS.includes(n))n='simulateur';
+ TABS.forEach(t=>{$('p-'+t).hidden=t!==n;$('t-'+t).setAttribute('aria-selected',t===n);});
+ try{history.replaceState(null,'','#'+n);}catch(e){}}
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+window.addEventListener('hashchange',()=>showTab(location.hash.slice(1)));
+
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
+init();update();newScenario();showStats();
+if(location.hash)showTab(location.hash.slice(1));
+</script>
+</body>
+</html>
