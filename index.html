@@ -80,6 +80,17 @@ input[type=range]{width:100%;height:32px;accent-color:var(--accent);margin:2px 0
 .opts label{display:flex;align-items:center;gap:8px;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:14px;cursor:pointer;min-height:44px}
 .opts input{width:18px;height:18px;accent-color:var(--accent)}
 .hint{font-size:12px;color:var(--muted);margin:4px 0 0}
+.acfield{position:relative}
+.acbox{position:relative}
+.acbox input{padding-right:44px}
+.acbox button{position:absolute;right:2px;top:2px;width:40px;height:40px;border:0;background:transparent;color:var(--muted);font-size:16px;cursor:pointer;border-radius:8px}
+#aclist{position:absolute;left:0;right:0;top:72px;z-index:20;max-height:300px;overflow-y:auto;margin:0;padding:4px;list-style:none;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);-webkit-overflow-scrolling:touch}
+#aclist li{padding:10px 10px;border-radius:8px;font-size:15px;cursor:pointer;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+#aclist li small{color:var(--muted);font-size:12px;white-space:nowrap}
+#aclist li.gh{cursor:default;font-family:var(--display);text-transform:uppercase;letter-spacing:.06em;font-size:13px;color:var(--brass);padding:8px 10px 2px;font-weight:600}
+#aclist li.none{cursor:default;color:var(--muted)}
+#aclist li.auto{font-weight:600}
+#aclist li.hl,#aclist li[data-i]:hover{background:var(--soft)}
 /* Devis */
 .quote{padding:0;overflow:hidden}
 .q-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:14px 16px;background:var(--soft);border-bottom:1px solid var(--line);flex-wrap:wrap}
@@ -119,6 +130,44 @@ td.amt{text-align:right;font-family:var(--mono);font-size:14px;white-space:nowra
 .legend{display:flex;flex-wrap:wrap;gap:4px 14px;padding:8px 16px 0;font-size:12px;color:var(--muted)}
 .legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;background:var(--k)}
 .disc{font-size:12px;color:var(--muted);padding:0 16px 16px}
+/* Choix du modèle : recherche en tapant */
+let acSel='auto',acHi=-1;
+const acIn=$('ac'),acList=$('aclist');
+function nrm(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();}
+function acMatches(q){const t=nrm(q).split(' ').filter(Boolean);return AC.map((c,i)=>i).filter(i=>{const h=nrm(AC[i].name+' '+AC[i].cl);return t.every(x=>h.includes(x));});}
+function acOpen(q){
+ const items=acMatches(q||'');let h='',last=-1;
+ if(!q)h+='<li role="option" class="auto" data-i="auto">Automatique<small>le moins cher qui convient</small></li>';
+ items.forEach(i=>{const c=AC[i];if(c.cls!==last){h+=`<li class="gh" role="presentation">${CLS[c.cls]}</li>`;last=c.cls;}
+  h+=`<li role="option" data-i="${i}">${c.name}<small>${c.pax} pax · ${Math.round(c.range/100)*100} km</small></li>`;});
+ if(!items.length)h+='<li class="none" role="presentation">Aucun modèle trouvé</li>';
+ acList.innerHTML=h;acList.hidden=false;acIn.setAttribute('aria-expanded','true');acHi=-1;
+}
+function acClose(){acList.hidden=true;acIn.setAttribute('aria-expanded','false');}
+function acInfo(){const el=$('acInfo');
+ if(acSel==='auto'){el.textContent="Automatique : l'appli prend le modèle le moins cher qui convient. Tape quelques lettres pour en choisir un.";}
+ else{const c=AC[acSel];el.textContent=`${c.cl} · ${c.pax} sièges · portée ${Math.round(c.range/100)*100} km · ${fmt(c.rate)} / h (indicatif)`;}}
+function acChoose(v){acSel=v;acIn.value=v==='auto'?'':AC[v].name;acClose();acInfo();update();}
+function acResolve(){
+ const v=acIn.value.trim();
+ if(!v){acSel='auto';}
+ else{const m=acMatches(v);if(m.length){const ex=m.find(i=>nrm(AC[i].name)===nrm(v));acSel=ex!==undefined?ex:m[0];}}
+ acIn.value=acSel==='auto'?'':AC[acSel].name;acClose();acInfo();update();
+}
+function acMove(d){const li=[...acList.querySelectorAll('li[data-i]')];if(!li.length)return;
+ acHi=(acHi+d+li.length)%li.length;li.forEach((x,k)=>x.classList.toggle('hl',k===acHi));li[acHi].scrollIntoView({block:'nearest'});}
+acIn.addEventListener('focus',()=>{if(acSel!=='auto')acIn.select();acOpen('');});
+acIn.addEventListener('input',()=>{if(!acIn.value.trim()){acSel='auto';acInfo();update();}acOpen(acIn.value);});
+acIn.addEventListener('keydown',e=>{
+ if(e.key==='ArrowDown'){e.preventDefault();acMove(1);}
+ else if(e.key==='ArrowUp'){e.preventDefault();acMove(-1);}
+ else if(e.key==='Enter'){e.preventDefault();const hl=acList.querySelector('li.hl');if(hl){const v=hl.dataset.i;acChoose(v==='auto'?'auto':+v);}else acResolve();acIn.blur();}
+ else if(e.key==='Escape'){acClose();}
+});
+acIn.addEventListener('blur',()=>{setTimeout(()=>{if(!acList.hidden)acResolve();},150);});
+acList.addEventListener('pointerdown',e=>{const li=e.target.closest('li[data-i]');if(!li)return;e.preventDefault();const v=li.dataset.i;acChoose(v==='auto'?'auto':+v);acIn.blur();});
+$('acClear').addEventListener('click',()=>acChoose('auto'));
+
 /* Défi */
 .brief{font-size:16px;line-height:1.55;border-left:4px solid var(--accent);padding:4px 0 4px 14px;margin:0 0 14px}
 .guess{display:flex;gap:8px;flex-wrap:wrap}
@@ -178,8 +227,8 @@ dl{margin:0}
 
       <div class="gauge">
         <div class="top"><label class="glabel" for="pax">Passagers</label><output id="paxO">4</output></div>
-        <input type="range" id="pax" min="1" max="16" step="1" value="4">
-        <div class="sub"><span>1</span><span>16</span></div>
+        <input type="range" id="pax" min="1" max="100" step="1" value="4">
+        <div class="sub"><span>1</span><span>100</span></div>
       </div>
       <div class="gauge">
         <div class="top"><label class="glabel" for="bag">Bagages par personne</label><output id="bagO">20 kg</output></div>
@@ -197,7 +246,10 @@ dl{margin:0}
         <div class="sub"><span>0 %</span><span>15 %</span></div>
       </div>
 
-      <div class="field"><label for="cat">Appareil</label><select id="cat"></select></div>
+      <div class="field acfield"><label for="ac">Modèle d'avion</label>
+        <div class="acbox"><input type="text" id="ac" placeholder="Auto · ou tape : g650, citation, a330…" autocomplete="off" autocapitalize="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="aclist"><button type="button" id="acClear" aria-label="Revenir au choix automatique">✕</button></div>
+        <ul id="aclist" role="listbox" hidden></ul>
+        <p class="hint" id="acInfo"></p></div>
 
       <div class="glabel" style="margin-bottom:6px">Options</div>
       <div class="opts">
@@ -244,7 +296,7 @@ const AIRPORTS=[
  {c:'Paris',n:'Paris (LBG)',code:'LBG',lat:48.969,lon:2.441,fee:1800,eu:1},
  {c:'Nantes',n:'Nantes (NTE)',code:'NTE',lat:47.153,lon:-1.611,fee:900,eu:1},
  {c:'Nice',n:'Nice (NCE)',code:'NCE',lat:43.665,lon:7.215,fee:1900,eu:1},
- {c:'Cannes',n:'Cannes-Mandelieu (CEQ)',code:'CEQ',lat:43.542,lon:6.953,fee:1100,eu:1,maxCat:2},
+ {c:'Cannes',n:'Cannes-Mandelieu (CEQ)',code:'CEQ',lat:43.542,lon:6.953,fee:1100,eu:1,maxFF:.85},
  {c:'Lyon',n:'Lyon-Bron (LYN)',code:'LYN',lat:45.727,lon:4.944,fee:1100,eu:1},
  {c:'Marseille',n:'Marseille (MRS)',code:'MRS',lat:43.436,lon:5.215,fee:1300,eu:1},
  {c:'Bordeaux',n:'Bordeaux (BOD)',code:'BOD',lat:44.828,lon:-0.716,fee:1000,eu:1},
@@ -277,15 +329,78 @@ const AIRPORTS=[
  {c:'Tokyo',n:'Tokyo Haneda (HND)',code:'HND',lat:35.549,lon:139.780,fee:3200,eu:0},
  {c:'Singapour',n:'Singapour Seletar (XSP)',code:'XSP',lat:1.417,lon:103.868,fee:2500,eu:0}
 ];
-const CATS=[
- {name:'Turbopropulseur',ex:'Pilatus PC-12',pax:6,speed:520,rate:2200,range:3200,bag:250,ff:0.6},
- {name:'Jet très léger',ex:'Phenom 100 / Citation M2',pax:4,speed:720,rate:2700,range:2000,bag:120,ff:0.7},
- {name:'Jet léger',ex:'Phenom 300 / Citation CJ3',pax:7,speed:800,rate:3500,range:3600,bag:250,ff:0.85},
- {name:'Jet moyen',ex:'Citation XLS / Learjet 60',pax:8,speed:790,rate:4400,range:3900,bag:350,ff:1},
- {name:'Jet super moyen',ex:'Challenger 350 / Praetor 600',pax:9,speed:830,rate:5700,range:6000,bag:500,ff:1.2},
- {name:'Gros porteur',ex:'Falcon 7X / Gulfstream G450',pax:14,speed:880,rate:8200,range:9000,bag:800,ff:1.7},
- {name:'Ultra longue distance',ex:'Global 6000 / Gulfstream G650',pax:16,speed:900,rate:11000,range:12500,bag:1100,ff:2.3}
+const CLS=['Turbopropulseur','Jet très léger','Jet léger','Jet moyen','Jet super moyen','Gros porteur','Ultra longue distance','Jet de ligne VIP'];
+/* [nom, classe, sièges, vitesse km/h, tarif €/h, portée km, soute kg, facteur de redevances] : valeurs indicatives */
+const RAW=[
+ ['Daher TBM 960',0,4,600,1500,2800,60,.45],
+ ['Pilatus PC-12 NGX',0,6,528,2300,3400,220,.6],
+ ['Beechcraft King Air 250',0,7,540,1900,2800,200,.6],
+ ['Beechcraft King Air 350i',0,8,580,2300,3300,250,.65],
+ ['Piaggio P.180 Avanti EVO',0,6,740,2600,2800,150,.65],
+ ['Cessna Grand Caravan EX',0,9,340,1700,2000,350,.6],
+ ['Cirrus Vision Jet SF50',1,4,550,1900,1900,70,.5],
+ ['Cessna Citation Mustang',1,4,630,2400,2100,80,.6],
+ ['Embraer Phenom 100EV',1,4,720,2600,2100,120,.7],
+ ['HondaJet Elite II',1,5,780,2900,2600,100,.7],
+ ['Cessna Citation CJ1+',1,5,720,2600,2400,120,.7],
+ ['Cessna Citation M2 Gen2',1,6,750,2800,2400,130,.7],
+ ['Cessna Citation CJ2+',2,6,740,3000,3000,170,.8],
+ ['Cessna Citation Bravo',2,7,720,3200,3100,180,.8],
+ ['Cessna Citation CJ3+',2,7,770,3300,3700,250,.85],
+ ['Cessna Citation CJ4',2,8,830,3800,3900,270,.9],
+ ['Cessna Citation Encore+',2,8,780,3600,3300,250,.9],
+ ['Embraer Phenom 300E',2,8,840,3700,3650,250,.9],
+ ['Pilatus PC-24',2,8,780,3600,3700,300,.85],
+ ['Learjet 45XR',2,8,800,3500,3900,200,.9],
+ ['Cessna Citation XLS+',3,8,800,4400,3900,350,1],
+ ['Cessna Citation Latitude',3,8,820,4800,5000,400,1.05],
+ ['Hawker 800XP',3,8,780,4000,4500,300,1],
+ ['Hawker 900XP',3,8,800,4200,4900,300,1],
+ ['Learjet 60XR',3,7,810,4200,4400,250,1],
+ ['Learjet 75 Liberty',3,8,830,4300,3800,250,1],
+ ['Dassault Falcon 50',3,9,800,5000,5600,350,1.1],
+ ['Embraer Praetor 500',3,9,850,4800,6100,450,1.1],
+ ['Bombardier Challenger 300',3,8,830,5300,5700,450,1.15],
+ ['Cessna Citation Sovereign+',4,9,830,5300,5800,450,1.15],
+ ['Cessna Citation X+',4,9,900,5800,6300,300,1.2],
+ ['Bombardier Challenger 350',4,9,830,5800,5900,500,1.2],
+ ['Bombardier Challenger 3500',4,10,850,6200,6700,500,1.2],
+ ['Bombardier Challenger 605',4,10,850,6000,7400,550,1.3],
+ ['Embraer Praetor 600',4,9,860,6200,7400,500,1.2],
+ ['Cessna Citation Longitude',4,9,840,6000,6500,500,1.2],
+ ['Gulfstream G280',4,9,850,6000,6700,450,1.2],
+ ['Dassault Falcon 2000LXS',4,9,850,6200,7400,450,1.25],
+ ['Embraer Legacy 600',5,13,850,7000,6300,700,1.4],
+ ['Embraer Legacy 650',5,13,850,7500,7200,700,1.5],
+ ['Bombardier Challenger 650',5,12,850,6700,7400,600,1.4],
+ ['Dassault Falcon 900EX',5,12,850,7500,7600,600,1.5],
+ ['Dassault Falcon 900LX',5,12,850,7800,8800,600,1.5],
+ ['Gulfstream G450',5,14,880,8200,8000,800,1.7],
+ ['Dassault Falcon 7X',5,14,880,8800,11000,800,1.7],
+ ['Dassault Falcon 6X',5,16,900,9500,10200,800,1.7],
+ ['Dassault Falcon 8X',5,14,900,9800,11900,800,1.8],
+ ['Gulfstream G500',5,16,900,9000,9800,900,1.9],
+ ['Bombardier Global 5000',6,13,900,9500,9600,800,1.8],
+ ['Gulfstream G550',6,16,900,10000,12500,900,2],
+ ['Bombardier Global 6000',6,13,900,11000,11100,900,2],
+ ['Gulfstream G600',6,16,900,11500,12000,1000,2.2],
+ ['Bombardier Global 6500',6,14,900,11800,12000,900,2.1],
+ ['Gulfstream G650',6,16,925,12000,12900,1000,2.3],
+ ['Gulfstream G650ER',6,16,925,12500,13900,1000,2.4],
+ ['Bombardier Global 7500',6,17,925,13500,14200,1100,2.4],
+ ['Gulfstream G700',6,19,925,14000,13900,1100,2.4],
+ ['Bombardier Global 8000',6,17,925,14000,14800,1100,2.4],
+ ['Gulfstream G800',6,19,925,14000,14800,1100,2.4],
+ ['Embraer Lineage 1000E',7,19,850,13000,8500,1500,2.2],
+ ['Airbus ACJ319neo',7,19,840,17500,12500,3000,3.5],
+ ['Boeing BBJ 737-700',7,25,830,15000,10900,3000,3.6],
+ ['Airbus ACJ320neo',7,25,840,19000,11100,3500,4],
+ ['Boeing BBJ MAX 8',7,25,840,19500,11700,3500,4],
+ ['Airbus A330 ACJ (ACJ330)',7,80,870,32000,12500,6000,6],
+ ['Boeing BBJ 787-8',7,100,900,40000,17000,8000,7],
+ ['Airbus ACJ350 XWB',7,100,910,48000,18000,8000,7.5]
 ];
+const AC=RAW.map(r=>({name:r[0],cls:r[1],cl:CLS[r[1]],pax:r[2],speed:r[3],rate:r[4],range:r[5],bag:r[6],ff:r[7]}));
 const CATERING=[
  {n:'Aucun',p:0},{n:'Boissons et snacks',p:35},{n:'Plateaux repas',p:90},{n:'Premium',p:180},{n:'Gastronomique + champagne',p:350}
 ];
@@ -310,31 +425,36 @@ function demand(dep,today,A,B){
  if(wd===5||wd===0){pct+=.05;reasons.push('vendredi ou dimanche : +5 %');}
  return {pct:Math.min(pct,.45),reasons};
 }
-function pickCat(pax,bagTotal,route,maxCat){
- for(let i=0;i<=maxCat;i++){const c=CATS[i];if(pax<=c.pax&&bagTotal<=c.bag&&route<=c.range*.9)return {i,stop:false};}
- for(let i=0;i<=maxCat;i++){const c=CATS[i];if(pax<=c.pax&&bagTotal<=c.bag&&route<=c.range*1.8)return {i,stop:true};}
- return {i:Math.min(6,maxCat),stop:true,fail:true};
+function pickCat(pax,bagTotal,route,maxFF){
+ const ok=AC.map((c,i)=>i).filter(i=>AC[i].ff<=maxFF&&!(AC[i].speed<450&&route>500)&&!(AC[i].cls===0&&route>1500));
+ const byRate=(x,y)=>AC[x].rate-AC[y].rate;
+ let l=ok.filter(i=>pax<=AC[i].pax&&bagTotal<=AC[i].bag&&route<=AC[i].range*.9).sort(byRate);
+ if(l.length)return {i:l[0],stop:false};
+ l=ok.filter(i=>pax<=AC[i].pax&&bagTotal<=AC[i].bag&&route<=AC[i].range*1.8).sort(byRate);
+ if(l.length)return {i:l[0],stop:true};
+ const big=ok.slice().sort((x,y)=>AC[y].range-AC[x].range)[0];
+ return {i:big,stop:true,fail:true};
 }
 function computeQuote(p){
  const A=p.from,B=p.to,legs=p.round?2:1;
  const dist=hav(A,B),route=dist*1.05,bagTotal=p.pax*p.bagKg;
- const maxCat=Math.min(A.maxCat??6,B.maxCat??6);
+ const maxFF=Math.min(A.maxFF??99,B.maxFF??99);
  const warns=[];let ci,stop;
- if(p.cat==='auto'){const r=pickCat(p.pax,bagTotal,route,maxCat);ci=r.i;stop=r.stop;
+ if(p.cat==='auto'){const r=pickCat(p.pax,bagTotal,route,maxFF);ci=r.i;stop=r.stop;
   if(r.fail)warns.push({t:'bad',m:'Aucun appareil ne réalise ce vol dans ces conditions. Réduis les passagers, les bagages ou la distance.'});}
- else{ci=+p.cat;stop=route>CATS[ci].range*.9;}
- const c=CATS[ci];
+ else{ci=+p.cat;stop=route>AC[ci].range*.9;}
+ const c=AC[ci];
  if(p.pax>c.pax)warns.push({t:'bad',m:`Cet appareil n'a que ${c.pax} sièges pour ${p.pax} passagers.`});
  if(bagTotal>c.bag)warns.push({t:'bad',m:`${bagTotal} kg de bagages pour ${c.bag} kg de soute : trop lourd pour cet appareil.`});
  if(route>c.range*1.8)warns.push({t:'bad',m:'Distance trop longue pour cet appareil, même avec une escale.'});
- if(ci>maxCat)warns.push({t:'bad',m:'Cannes-Mandelieu n\'accepte que les jets légers ou plus petits.'});
+ if(c.ff>maxFF)warns.push({t:'bad',m:'Cannes-Mandelieu n\'accepte que les jets légers ou plus petits.'});
  if(stop&&route<=c.range*1.8)warns.push({t:'info',m:'Escale technique de ravitaillement nécessaire : +0,6 h par vol et frais d\'atterrissage supplémentaires.'});
  const block=route/c.speed+.3;
  const hrs=Math.max(1,block)+(stop?.6:0);
  const lines=[];
  const add=(g,label,qty,amt,note)=>{if(amt>0.5||amt<-0.5)lines.push({g,label,qty,amt,note});};
  const flight=c.rate*hrs*legs;
- add('Vol',`Heures de vol : ${c.name}`,`${(hrs*legs).toFixed(1)} h × ${fmt(c.rate)} (${c.ex})`,flight,'Tarif horaire de l\'appareil : équipage, assurance, entretien. Minimum facturé 1 h par vol.');
+ add('Vol',`Heures de vol : ${c.name}`,`${(hrs*legs).toFixed(1)} h × ${fmt(c.rate)}`,flight,'Tarif horaire de l\'appareil : équipage, assurance, entretien. Minimum facturé 1 h par vol.');
  const posit=p.round?0:.4*c.rate*hrs;
  add('Vol','Repositionnement de l\'avion',`40 % d'un vol à vide`,posit,'En aller simple, l\'avion rentre à vide vers sa base. L\'opérateur en facture une part.');
  const base=flight+posit;
@@ -398,7 +518,7 @@ function renderQuote(q,el){
  <div class="chips">
   <span class="chip"><b>${p.round?'Aller-retour':'Aller simple'}</b></span>
   <span class="chip">${dfr(p.dep)}${p.round?' → '+dfr(p.ret):''}</span>
-  <span class="chip"><b>${q.c.name}</b> · ${q.c.ex}</span>
+  <span class="chip"><b>${q.c.name}</b> · ${q.c.cl}</span>
   <span class="chip">Vol ≈ ${hh(q.block+(q.stop?.6:0))}${q.stop?' avec escale':''}</span>
   <span class="chip">${p.pax} pax · ${q.bagTotal} kg de bagages</span>
  </div>
@@ -417,12 +537,12 @@ function renderQuote(q,el){
 }
 
 /* Simulateur */
-const els={};['from','to','dep','ret','pax','bag','cater','comm','cat'].forEach(i=>els[i]=$(i));
+const els={};['from','to','dep','ret','pax','bag','cater','comm'].forEach(i=>els[i]=$(i));
 let round=false,deiceTouched=false;
 function today0(){const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate());}
 function init(){
  $('airports').innerHTML=AIRPORTS.map(a=>`<option value="${a.n}">`).join('');
- els.cat.innerHTML='<option value="auto">Automatique (le plus économique)</option>'+CATS.map((c,i)=>`<option value="${i}">${c.name} · ${c.pax} pax max</option>`).join('');
+ acInfo();
  const t=today0(),d=new Date(t);d.setDate(d.getDate()+14);
  els.dep.value=ymd(d);els.dep.min=ymd(t);
  const r=new Date(d);r.setDate(r.getDate()+2);els.ret.value=ymd(r);
@@ -432,7 +552,7 @@ function params(){
  const A=findAirport(els.from.value),B=findAirport(els.to.value);
  if(!A||!B||A===B||!els.dep.value)return null;
  const dep=pd(els.dep.value);let ret=els.ret.value?pd(els.ret.value):dep;if(ret<dep)ret=dep;
- return {from:A,to:B,round,dep,ret,today:today0(),pax:+els.pax.value,bagKg:+els.bag.value,catering:+els.cater.value,commission:+els.comm.value,cat:els.cat.value,
+ return {from:A,to:B,round,dep,ret,today:today0(),pax:+els.pax.value,bagKg:+els.bag.value,catering:+els.cater.value,commission:+els.comm.value,cat:acSel,
   o:{crew:$('o-crew').checked,wifi:$('o-wifi').checked,pet:$('o-pet').checked,limo:$('o-limo').checked,deice:$('o-deice').checked}};
 }
 function update(){
