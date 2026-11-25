@@ -250,6 +250,7 @@ dl{margin:0}
 <section class="panel" id="p-glossaire" role="tabpanel" aria-labelledby="t-glossaire" hidden>
   <dl class="gl" id="gl"></dl>
 </section>
+<p class="disc" style="text-align:center;margin-top:20px">Version 4 · estimations pédagogiques</p>
 </div>
 
 <script>
@@ -641,7 +642,7 @@ function showTab(n){if(!TABS.includes(n))n='simulateur';
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 window.addEventListener('hashchange',()=>showTab(location.hash.slice(1)));
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{const had=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!window.__r){window.__r=1;location.reload();}});});}
 init();update();newScenario();showStats();
 if(location.hash)showTab(location.hash.slice(1));
 </script>
